@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/CSM-CGEM/PENF.git
+revision = meson-build
+depth = 1
+
+[provide]
+penf = penf_dep

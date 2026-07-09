@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/CSM-CGEM/StringiFor.git
+revision = meson-build
+depth = 1
+
+[provide]
+stringifor = stringifor_dep

@@ -35,3 +35,17 @@ docs/node_modules/
 docs/package-lock.json
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+subprojects/.wraplock
+
+subprojects/befor64
+
+subprojects/befor64.wrap
+
+subprojects/face
+
+subprojects/face.wrap
+
+subprojects/penf
+
+subprojects/stringifor

@@ -4,7 +4,7 @@ module finer_section_t
 use finer_backend
 use finer_option_t, only : option
 use penf
-use stringifor, only : string, index
+use stringifor, only : string, index, scan, adjustl
 
 implicit none
 private
@@ -466,6 +466,7 @@ contains
   endif
   source = ''
   do o=1, size(tokens, dim=1)
+    if (scan(adjustl(tokens(o)), COMMENTS) == 1) cycle
     if ((tokens(o)%index(substring=sep) > 0).or.&
         (tokens(o)%index(substring='[') > 0).or.&
         (tokens(o)%index(substring=']') > 0)) source = source//tokens(o)//new_line('a')

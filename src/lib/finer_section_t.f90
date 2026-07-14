@@ -428,15 +428,16 @@ contains
 
   error = 0
   source = trim(adjustl(source%slice(index(source, "]")+1, source%len())))
-  No = source%count(substring=sep)
+  call source%split(tokens=tokens, sep=new_line('a'))
+  No = 0
+  do o=1, size(tokens, dim=1)
+    if (index(strip_inline_comment(tokens(o)), sep)>0) No = No + 1
+  enddo
   if (No>0) then
-    call source%split(tokens=tokens, sep=new_line('a'))
     if (allocated(self%options)) deallocate(self%options) ; allocate(self%options(1:No))
-    o = 0
     oo = 0
-    do while (o+1<=size(tokens, dim=1))
-      o = o + 1
-      if (index(tokens(o), sep)>0) then
+    do o=1, size(tokens, dim=1)
+      if (index(strip_inline_comment(tokens(o)), sep)>0) then
         oo = oo + 1
         call self%options(oo)%parse(sep=sep, source=tokens(o), error=error)
         if (error /=0 ) then
@@ -456,6 +457,7 @@ contains
   type(string),  intent(inout) :: source    !< String containing option data.
   integer(I4P),  intent(out)   :: error     !< Error code.
   type(string),  allocatable   :: tokens(:) !< Source tokens.
+  type(string)                 :: clean     !< Token with inline comment stripped.
   integer(I4P)                 :: o         !< Counter.
 
   call source%split(tokens=tokens, sep=new_line('a'))
@@ -467,13 +469,27 @@ contains
   source = ''
   do o=1, size(tokens, dim=1)
     if (scan(adjustl(tokens(o)), COMMENTS) == 1) cycle
-    if ((tokens(o)%index(substring=sep) > 0).or.&
-        (tokens(o)%index(substring='[') > 0).or.&
-        (tokens(o)%index(substring=']') > 0)) source = source//tokens(o)//new_line('a')
+    clean = strip_inline_comment(tokens(o))
+    if ((clean%index(substring=sep) > 0).or.&
+        (clean%index(substring='[') > 0).or.&
+        (clean%index(substring=']') > 0)) source = source//tokens(o)//new_line('a')
   enddo
   source = source%slice(1, source%len()-1)
   error = 0
   endsubroutine sanitize_source
+
+  elemental function strip_inline_comment(line) result(stripped)
+  !< Return the portion of line before the first comment character.
+  type(string), intent(in) :: line
+  type(string)             :: stripped
+  integer(I4P)             :: cpos
+  cpos = scan(line, COMMENTS)
+  if (cpos > 0) then
+    stripped = line%slice(1, cpos-1)
+  else
+    stripped = line
+  endif
+  endfunction strip_inline_comment
 
   pure subroutine set_option(self, option_name, val, error)
   !< Set option value (scalar).

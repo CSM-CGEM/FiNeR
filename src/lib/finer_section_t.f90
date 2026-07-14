@@ -475,6 +475,19 @@ contains
   error = 0
   endsubroutine sanitize_source
 
+  elemental function strip_inline_comment(line) result(stripped)
+  !< Return the portion of line before the first comment character.
+  type(string), intent(in) :: line
+  type(string)             :: stripped
+  integer(I4P)             :: cpos
+  cpos = scan(line, COMMENTS)
+  if (cpos > 0) then
+    stripped = line%slice(1, cpos-1)
+  else
+    stripped = line
+  endif
+  endfunction strip_inline_comment
+
   pure subroutine set_option(self, option_name, val, error)
   !< Set option value (scalar).
   class(section), intent(inout)         :: self        !< Section data.

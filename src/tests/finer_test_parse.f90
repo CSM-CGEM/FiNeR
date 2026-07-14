@@ -53,6 +53,40 @@ val = repeat(' ', 64)
 call fini%get(section_name='s1', option_name='key', val=val, error=error)
 call check("custom separator ':'",           trim(val) == 'value')
 
+call fini%free
+source = '[section-3]'//new_line('A')//                                     &
+         'option-1 = 1.'//new_line('A')//                                   &
+         '; comment interrupting a continued value'//new_line('A')//        &
+         '           2.'//new_line('A')//                                   &
+         '           3. ; trailing inline comment'//new_line('A')//         &
+         'option-2 = end'
+call fini%load(source=source)
+deallocate(arr)
+allocate(arr(1:fini%count_values(section_name='section-3', option_name='option-1')))
+call fini%get(section_name='section-3', option_name='option-1', val=arr, error=error)
+call check('continuation across comment: token count == 3',   size(arr) == 3)
+call check('continuation across comment: first token == 1.',  abs(arr(1) - 1._R4P) < 1e-6_R4P)
+call check('continuation across comment: second token == 2.', abs(arr(2) - 2._R4P) < 1e-6_R4P)
+call check('continuation across comment: third token == 3.',  abs(arr(3) - 3._R4P) < 1e-6_R4P)
+val = repeat(' ', 64)
+call fini%get(section_name='section-3', option_name='option-2', val=val, error=error)
+call check('option following interrupted continuation parses', trim(val) == 'end')
+
+call fini%free
+source = '[section-4]'//new_line('A')//                                     &
+         "option-1 = 1. ; comment on an intermediate continuation line"//   &
+         new_line('A')//                                                    &
+         '           2.'//new_line('A')//                                   &
+         '           3.'
+call fini%load(source=source)
+deallocate(arr)
+allocate(arr(1:fini%count_values(section_name='section-4', option_name='option-1')))
+call fini%get(section_name='section-4', option_name='option-1', val=arr, error=error)
+call check('intermediate inline comment: token count == 3',   size(arr) == 3)
+call check('intermediate inline comment: first token == 1.',  abs(arr(1) - 1._R4P) < 1e-6_R4P)
+call check('intermediate inline comment: second token == 2.', abs(arr(2) - 2._R4P) < 1e-6_R4P)
+call check('intermediate inline comment: third token == 3.',  abs(arr(3) - 3._R4P) < 1e-6_R4P)
+
 call summary
 contains
 

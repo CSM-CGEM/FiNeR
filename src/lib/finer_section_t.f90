@@ -452,29 +452,51 @@ contains
   elemental subroutine sanitize_source(sep, source, error)
   !< Sanitize source.
   !<
+  !<+ Remove standalone (full-line) comments;
   !<+ Join splitted options;
-  character(*),  intent(in)    :: sep       !< Separator of option name/value.
-  type(string),  intent(inout) :: source    !< String containing option data.
-  integer(I4P),  intent(out)   :: error     !< Error code.
-  type(string),  allocatable   :: tokens(:) !< Source tokens.
-  type(string)                 :: clean     !< Token with inline comment stripped.
-  integer(I4P)                 :: o         !< Counter.
+  character(*),  intent(in)    :: sep            !< Separator of option name/value.
+  type(string),  intent(inout) :: source         !< String containing option data.
+  integer(I4P),  intent(out)   :: error          !< Error code.
+  type(string),  allocatable   :: tokens(:)      !< Source tokens.
+  type(string),  allocatable   :: significant(:) !< Tokens with standalone comments removed.
+  type(string)                 :: clean          !< Token with inline comment stripped.
+  integer(I4P)                 :: Nt             !< Counter of significant tokens.
+  integer(I4P)                 :: o              !< Counter.
 
   call source%split(tokens=tokens, sep=new_line('a'))
+  ! drop standalone comment lines *before* joining continuation lines: otherwise a comment
+  ! interposed between the physical lines of a multi-line value breaks the continuation
+  Nt = 0
+  do o=1, size(tokens, dim=1)
+    if (scan(adjustl(tokens(o)), COMMENTS) == 1) cycle
+    Nt = Nt + 1
+    if (Nt /= o) tokens(Nt) = tokens(o)
+  enddo
+  if (Nt < size(tokens, dim=1)) then
+    significant = tokens(1:Nt)
+    call move_alloc(significant, tokens)
+  endif
+  ! fold continuation lines (those without the separator, once any inline comment is
+  ! stripped) backward into the option they belong to, walking from the end so that
+  ! continuations spanning more than two physical lines accumulate correctly. the
+  ! predecessor's own inline comment is stripped before appending onto it, since it is no
+  ! longer the value's last line; only the chain's true last line keeps its comment
   if (size(tokens, dim=1) > 1) then
-    do o=2, size(tokens, dim=1)
-      if (tokens(o)%index(substring=sep) == 0) tokens(o-1) = tokens(o-1)//' '//tokens(o)
+    do o=size(tokens, dim=1), 2, -1
+      if (strip_inline_comment(tokens(o))%index(substring=sep) == 0) then
+        tokens(o-1) = strip_inline_comment(tokens(o-1))//' '//tokens(o)
+        tokens(o) = ''
+      endif
     enddo
   endif
   source = ''
   do o=1, size(tokens, dim=1)
-    if (scan(adjustl(tokens(o)), COMMENTS) == 1) cycle
     clean = strip_inline_comment(tokens(o))
     if ((clean%index(substring=sep) > 0).or.&
         (clean%index(substring='[') > 0).or.&
         (clean%index(substring=']') > 0)) source = source//tokens(o)//new_line('a')
   enddo
-  source = source%slice(1, source%len()-1)
+  if (source%len() > 0) source = source%slice(1, source%len()-1)
   error = 0
   endsubroutine sanitize_source
 
